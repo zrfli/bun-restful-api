@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" sizes="256x256" href="https://bun.sh/logo.svg">
+  <title>Nisantasi University - Bun Api Service By Eray</title>
+  <style>
+    * {
+      -webkit-scrollbar { display: none; }
+      -ms-overflow-style: none;
+      scrollbar-width: none;    
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #000;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .container {
+      text-align: center;
+      padding: 20px;
+      max-width: 90%;
+      box-sizing: border-box;
+    }
+    h1 {
+      color: #fff;
+      font-size: 1.5em;
+      margin: 0;
+    }
+    p, a {
+      color: #ccc;
+      font-size: 1em;
+    }
+    #charts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+      width: 100%;
+      max-width: 800px;
+    }
+    canvas {
+      background-color: #222;
+      border-radius: 8px;
+      width: 100%;
+      max-width: 100%;
+      height: 200px; /* Daha küçük bir yüksekliğe ayarlayalım */
+      box-sizing: border-box;
+    }
+    #status {
+      font-size: 0.8em;
+      color: #aaa;
+      margin-top: 10px;
+      max-width: 800px;
+      word-wrap: break-word;
+    }
+    @media (max-width: 768px) {
+      #charts {
+        grid-template-columns: 1fr;
+      }
+      canvas {
+        height: 150px; /* Küçük ekranlar için yüksekliği daha da küçültelim */
+      }
+    }
+    @media (max-width: 768px) { #charts { display: none; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="https://bun.sh/logo.svg" loading="lazy" decoding="async" alt="" width="250" height="250" />
+    <h1>Welcome to Nisantasi University - Bun Api Service</h1>
+    <p><a href="/swagger">Go to Swagger Documentation</a></p>
+    <div id="status">Loading server status...</div>
+    <div id="charts">
+      <canvas id="cpuChart"></canvas>
+      <canvas id="memoryChart"></canvas>
+    </div>
+  </div>
+  <script src="019117a3x0b1c.js"></script>
+  <script>
+    const ws = new WebSocket('ws://' + window.location.hostname + ':8080');
+
+    let cpuData = [];
+    let memoryData = [];
+    let labels = [];
+
+    const ctxCpu = document.getElementById('cpuChart').getContext('2d');
+    const ctxMemory = document.getElementById('memoryChart').getContext('2d');
+
+    const cpuChart = new Chart(ctxCpu, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'CPU Usage (%)',
+          data: cpuData,
+          borderColor: 'rgba(75, 192, 192, 1)',
+          borderWidth: 1,
+          fill: false
+        }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Time'
+            }
+          },
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Usage (%)'
+            }
+          }
+        }
+      }
+    });
+
+    const memoryChart = new Chart(ctxMemory, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Memory Usage (%)',
+          data: memoryData,
+          borderColor: 'rgba(153, 102, 255, 1)',
+          borderWidth: 1,
+          fill: false
+        }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Time'
+            }
+          },
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Usage (%)'
+            }
+          }
+        }
+      }
+    });
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerText = `Server Status: Uptime: ${data.uptime}, CPU Usage: ${data.cpuUsage}, Memory Usage: ${data.memoryUsage}, Load Average: ${data.loadAverage}`;
+
+      const currentTime = new Date().toLocaleTimeString();
+
+      labels.push(currentTime);
+      cpuData.push(parseFloat(data.cpuUsage));
+      memoryData.push(parseFloat(data.memoryUsage));
+
+      if (labels.length > 10) {
+        labels.shift();
+        cpuData.shift();
+        memoryData.shift();
+      }
+
+      cpuChart.update();
+      memoryChart.update();
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+  </script>
+</body>
+</html>
